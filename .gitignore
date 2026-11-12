@@ -1,0 +1,18 @@
+# Build output
+.build/
+build/
+.swiftpm/
+*.xcodeproj/xcuserdata/
+
+# Local signing identity: certificate, keychain and its password. Never commit.
+.signing/
+*.p12
+*.cer
+*.keychain-db
+*.mobileprovision
+.env*
+
+# Recorded sessions stay on your Mac (camera video of your hand).
+session-*/
+
+.DS_Store

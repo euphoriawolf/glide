@@ -1,0 +1,410 @@
+<title>Glide Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: one Mac screen as the stage, a quiet control strip under it. Single dark look on purpose. */
+:root {
+  --ground: #0a0b0d;
+  --fg: #f3f3f5;
+  --muted: #8a8e97;
+  --line: rgba(255,255,255,.09);
+  --glass: rgba(28,28,32,.74);
+  --ink: #000;
+  --accent: #0a84ff;
+  --ok: #30d158;
+  --warn: #ffd60a;
+  --ui: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { background: var(--ground); color: var(--fg); }
+body { font-family: var(--ui); -webkit-font-smoothing: antialiased; }
+.wrap {
+  max-width: 1080px; margin: 0 auto;
+  padding-block: 28px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 18px;
+}
+
+/* ---------- stage ---------- */
+.stage {
+  position: relative; width: 100%; aspect-ratio: 16 / 10; max-width: 100%;
+  border-radius: 14px; overflow: hidden; container-type: inline-size;
+  background:
+    radial-gradient(110% 70% at 72% 112%, #e0915a 0%, #8a4a4f 30%, #2a2638 58%, #12151d 82%),
+    #12151d;
+  box-shadow: 0 0 0 1px var(--line), 0 30px 80px rgba(0,0,0,.55);
+  user-select: none;
+}
+.dim { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .9s ease; pointer-events: none; z-index: 5; }
+.stage.dark .dim { opacity: .72; }
+
+.menubar {
+  position: absolute; inset: 0 0 auto 0; height: 2.3cqw; z-index: 6;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.4cqw; font-size: 1cqw; font-weight: 500;
+  background: rgba(20,20,26,.35); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+.menubar .left, .menubar .right { display: flex; gap: 1.6cqw; align-items: center; }
+.menubar .left b { font-weight: 700; }
+.mb-icon { width: 1.35cqw; height: 1.35cqw; display: grid; place-items: center; border-radius: .3cqw; cursor: pointer; }
+.mb-icon svg { width: 100%; height: 100%; }
+.mb-icon.open { background: rgba(255,255,255,.18); }
+
+/* notch + pill */
+.pill {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 9;
+  width: 12cqw; height: 2.4cqw; background: var(--ink);
+  border-radius: 0 0 1.1cqw 1.1cqw;
+  transition: width .5s cubic-bezier(.3,1.35,.5,1), height .5s cubic-bezier(.3,1.25,.5,1), border-radius .5s ease;
+  overflow: hidden;
+}
+.pill .wing { position: absolute; top: 0; height: 2.4cqw; display: flex; align-items: center; gap: .5cqw; opacity: 0; transition: opacity .25s ease .1s; }
+.pill .wl { left: 1.2cqw; }
+.pill .wr { right: 1.2cqw; font-size: .9cqw; font-weight: 600; }
+.pill .wing svg { width: 1.45cqw; height: 1.45cqw; }
+.pill.on { width: 21cqw; }
+.pill.on .wing { opacity: 1; }
+.pill.wide { width: 46cqw; height: 11.5cqw; border-radius: 0 0 2.8cqw 2.8cqw; }
+.pill .body { position: absolute; inset: 3cqw 2cqw 1.6cqw; display: grid; gap: 1cqw; opacity: 0; transition: opacity .2s ease; }
+.pill.wide .body { opacity: 1; transition-delay: .25s; }
+.wave { display: flex; gap: .32cqw; align-items: center; height: 2.4cqw; }
+.wave i { flex: 1; height: 20%; background: var(--fg); border-radius: 1cqw; opacity: .9; }
+.pill.wide .wave i { animation: bar .9s ease-in-out infinite alternate; }
+@keyframes bar { to { height: 100%; } }
+.said { font-size: 1.45cqw; line-height: 1.35; font-weight: 500; min-height: 4cqw; }
+.said .new { color: var(--muted); }
+.dot { width: .65cqw; height: .65cqw; border-radius: 50%; background: var(--ok); }
+.pinch-c { color: var(--accent); }
+.warn-c { color: var(--warn); }
+
+/* window */
+.win {
+  position: absolute; left: 13%; top: 14%; width: 52%; height: 66%; z-index: 2;
+  background: rgba(30,30,34,.86); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+  border-radius: 1.1cqw; box-shadow: 0 0 0 1px var(--line), 0 2cqw 5cqw rgba(0,0,0,.45);
+  display: grid; grid-template-columns: 34% 1fr; overflow: hidden;
+}
+.side { border-right: 1px solid var(--line); overflow: hidden; position: relative; padding-top: 3cqw; }
+.lights { position: absolute; top: 1.1cqw; left: 1.1cqw; display: flex; gap: .55cqw; }
+.lights i { width: .95cqw; height: .95cqw; border-radius: 50%; background: #5a5d64; }
+.list { transition: transform .9s cubic-bezier(.2,.8,.2,1); padding: 0 .7cqw; display: grid; gap: .15cqw; }
+.note { padding: .75cqw .9cqw; border-radius: .6cqw; font-size: 1.05cqw; line-height: 1.3; }
+.note small { display: block; color: var(--muted); font-size: .9cqw; margin-top: .15cqw; }
+.note.sel { background: var(--accent); }
+.note.sel small { color: rgba(255,255,255,.75); }
+.main { padding: 3cqw 2.6cqw; font-size: 1.25cqw; line-height: 1.55; overflow: hidden; }
+.main h3 { margin: 0 0 1cqw; font-size: 2cqw; font-weight: 700; letter-spacing: -.02em; }
+.main p { margin: 0 0 .8cqw; color: #c9cbd1; }
+.typed { color: var(--fg); }
+.caret { display: inline-block; width: .12cqw; height: 1.4cqw; background: var(--accent); vertical-align: -.2cqw; margin-left: .1cqw; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* desktop icons */
+.file, .folder {
+  position: absolute; width: 7cqw; display: grid; justify-items: center; gap: .4cqw; z-index: 3;
+  font-size: .95cqw; font-weight: 500; text-shadow: 0 1px 3px rgba(0,0,0,.6);
+}
+.file { left: 82%; top: 16%; transition: left .9s cubic-bezier(.25,.8,.25,1), top .9s cubic-bezier(.25,.8,.25,1), transform .2s ease; }
+.file.lift { transform: scale(1.08); filter: drop-shadow(0 1cqw 1.2cqw rgba(0,0,0,.5)); }
+.folder { left: 82%; top: 60%; transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
+.folder.hit { transform: scale(1.15); }
+.file svg, .folder svg { width: 4.4cqw; height: 4.4cqw; }
+
+/* cursor + feedback */
+.cursor {
+  position: absolute; left: 40%; top: 50%; width: 1.7cqw; height: 1.7cqw; z-index: 8;
+  transition-property: left, top, opacity; transition-timing-function: cubic-bezier(.3,.7,.3,1);
+  pointer-events: none; filter: drop-shadow(0 .2cqw .3cqw rgba(0,0,0,.5));
+}
+.cursor svg { width: 100%; height: 100%; display: block; }
+.stage.off .cursor { opacity: .35; }
+.ripple {
+  position: absolute; width: 1cqw; height: 1cqw; margin: -.5cqw 0 0 -.5cqw; border-radius: 50%; z-index: 7;
+  border: .2cqw solid var(--accent); animation: ripple .6s ease-out forwards; pointer-events: none;
+}
+@keyframes ripple { to { transform: scale(5); opacity: 0; } }
+
+/* status menu */
+.menu {
+  position: absolute; top: 2.6cqw; right: 9cqw; width: 19cqw; z-index: 10;
+  background: var(--glass); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+  border-radius: .9cqw; box-shadow: 0 0 0 1px var(--line), 0 1.5cqw 3cqw rgba(0,0,0,.4);
+  padding: .5cqw; font-size: 1.05cqw; display: grid; gap: .1cqw;
+}
+.menu div { display: flex; justify-content: space-between; padding: .45cqw .7cqw .45cqw 1.9cqw; border-radius: .45cqw; position: relative; }
+.menu div:hover { background: var(--accent); }
+.menu .chk::before { content: "✓"; position: absolute; left: .6cqw; }
+.menu kbd { font-family: inherit; color: var(--muted); }
+.menu hr { border: 0; border-top: 1px solid var(--line); margin: .3cqw .5cqw; }
+
+/* onboarding sheet */
+.sheet {
+  position: absolute; inset: 0; z-index: 11; display: grid; place-items: center;
+  background: rgba(0,0,0,.35); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.card {
+  width: 32cqw; padding: 3.2cqw 2cqw 2.4cqw; border-radius: 2.2cqw; text-align: center;
+  background: var(--glass); box-shadow: 0 0 0 1px var(--line), 0 3cqw 6cqw rgba(0,0,0,.5);
+  display: grid; justify-items: center; gap: 1.6cqw;
+}
+.card .big { width: 11cqw; height: 11cqw; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.06); transition: background .3s ease; }
+.card .big svg { width: 6.5cqw; height: 6.5cqw; transition: transform .3s ease; }
+.card.done .big { background: rgba(48,209,88,.18); }
+.bigwrap { position: relative; width: 15cqw; height: 15cqw; display: grid; place-items: center; }
+.ticks { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ticks line { stroke: rgba(255,255,255,.18); stroke-width: 1.6; stroke-linecap: round; transition: stroke .18s ease; }
+.ticks line.on { stroke: var(--fg); }
+.card.done .ticks line { stroke: var(--ok); }
+.card .word { font-size: 2.3cqw; font-weight: 600; letter-spacing: -.02em; }
+.steps { display: flex; gap: .7cqw; }
+.steps i { width: .7cqw; height: .7cqw; border-radius: 50%; background: rgba(255,255,255,.22); transition: background .3s; }
+.steps i.on { background: var(--fg); }
+@keyframes pinchpulse { 50% { transform: scale(.86); } }
+.card .big svg.pulse { animation: pinchpulse 1.2s ease-in-out infinite; }
+
+/* ---------- controls ---------- */
+.bar { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.seg { display: flex; flex-wrap: wrap; gap: 2px; padding: 3px; border-radius: 11px; background: rgba(255,255,255,.07); justify-content: center; }
+.seg button, .play {
+  font: 500 14px/1 var(--ui); color: var(--fg); background: transparent; border: 0;
+  padding: 9px 14px; border-radius: 8px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: rgba(255,255,255,.16); }
+.seg button:focus-visible, .play:focus-visible, .mb-icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.play { background: rgba(255,255,255,.07); width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border-radius: 50%; }
+.play svg { width: 16px; height: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+</style>
+
+<div class="wrap">
+  <div class="stage" id="stage">
+    <div class="menubar">
+      <div class="left"><b>Notes</b><span>File</span><span>Edit</span><span>Format</span><span>View</span></div>
+      <div class="right">
+        <div class="mb-icon" id="mbGlide" tabindex="0" role="button" aria-label="Glide menu"></div>
+        <span>Tue 11 Nov&nbsp;&nbsp;9:41</span>
+      </div>
+    </div>
+
+    <div class="win">
+      <div class="side">
+        <div class="lights"><i></i><i></i><i></i></div>
+        <div class="list" id="list"></div>
+      </div>
+      <div class="main">
+        <h3>Launch plan</h3>
+        <p>Demo video is cut. Landing page goes live Monday.</p>
+        <p>Open: pricing page copy, the onboarding email.</p>
+        <p class="typed" id="typed"></p>
+      </div>
+    </div>
+
+    <div class="file" id="file"><svg viewBox="0 0 48 48"><path d="M12 4h17l9 9v31H12z" fill="#e9eaee"/><path d="M29 4v9h9" fill="#c5c8cf"/><rect x="16" y="26" width="18" height="8" rx="2" fill="#ff453a"/></svg>Brief.pdf</div>
+    <div class="folder" id="folder"><svg viewBox="0 0 48 48"><path d="M4 12a3 3 0 0 1 3-3h12l4 4h18a3 3 0 0 1 3 3v22a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z" fill="#5fa8ff"/><path d="M4 18h40v20a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z" fill="#3d8ef0"/></svg>Launch</div>
+
+    <div class="cursor" id="cursor"><svg viewBox="0 0 24 24"><path d="M5 2.5v17.2l4.3-4.1 2.9 6.6 2.6-1.1-2.9-6.5h6z" fill="#fff" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/></svg></div>
+
+    <div class="pill" id="pill">
+      <div class="wing wl" id="wl"></div>
+      <div class="wing wr" id="wr"></div>
+      <div class="body">
+        <div class="wave" id="wave"></div>
+        <div class="said" id="said"></div>
+      </div>
+    </div>
+
+    <div class="menu" id="menu" hidden>
+      <div class="chk" id="mOn">Glide <kbd>⌃⌥Space</kbd></div>
+      <div>Tracking Preview <kbd>⌃⌥P</kbd></div>
+      <div>Primary Hand <kbd>Right ›</kbd></div>
+      <div class="chk">Low-Light Boost</div>
+      <hr>
+      <div>Practice Gestures…</div>
+      <div>Quit Glide <kbd>⌘Q</kbd></div>
+    </div>
+
+    <div class="sheet" id="sheet" hidden>
+      <div class="card" id="card">
+        <div class="bigwrap"><svg class="ticks" id="ticks" viewBox="-50 -50 100 100" aria-hidden="true"></svg><div class="big" id="cardIcon"></div></div>
+        <div class="word" id="cardWord"></div>
+        <div class="steps" id="steps"><i></i><i></i><i></i></div>
+      </div>
+    </div>
+
+    <div class="dim"></div>
+  </div>
+
+  <div class="bar">
+    <button class="play" id="play" aria-label="Pause"></button>
+    <div class="seg" id="seg" role="group" aria-label="Scene"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const stage = $('stage'), pill = $('pill'), cur = $('cursor');
+
+  // ---- icons (stroke glyphs, 24px grid) ----
+  const S = (d, c = 'currentColor', w = 1.7) => `<svg viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  // One glyph family: the pinch. The open palm read as "stop".
+  const PINCH = '<path d="M7 20c-2-2-3-4.5-3-7 0-2 1-3.5 2.5-4.5M9.5 9.5 6 4.8a1.6 1.6 0 0 1 2.6-1.8L12 8"/><circle cx="12.6" cy="9" r="1.6"/><path d="M14 8.2l3.3-3.6a1.6 1.6 0 0 1 2.4 2.1L16.5 11c1.6 1.8 2 4.6.5 7.2-1.6 2.6-4.6 3.8-7.5 3"/>';
+  const I = {
+    hand:  S(PINCH),
+    pinch: S(PINCH),
+    scroll:S('<path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/>'),
+    fist:  S('<rect x="5" y="7" width="13" height="10" rx="3"/><path d="M9 7v4M12.5 7v4M18 11h1.5a1.5 1.5 0 0 1 0 3H18M7 17v3h9v-3"/>'),
+    slash: S(PINCH + '<path d="M3 3l18 18"/>'),
+    moon:  S('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>'),
+    watch: S('<rect x="6" y="6" width="12" height="12" rx="3.5"/><path d="M9 6l.7-3h4.6L15 6M9 18l.7 3h4.6l.7-3M12 9.5V12l1.6 1"/>'),
+    mic:   S('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>'),
+    check: S('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 'var(--ok)', 2.4),
+    play:  '<svg viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>',
+    pause: '<svg viewBox="0 0 16 16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>',
+  };
+
+  // ---- static content ----
+  const notes = [['Launch plan','9:12'],['Pricing ideas','Yesterday'],['Interview prep','Yesterday'],['Watch gestures','Sun'],['Reading list','Sat'],['Gym split','Fri'],['Voice commands','Thu'],['Trip ideas','Wed'],['Q4 goals','Tue'],['Recipes','Mon'],['Clay waterfall','Oct 30'],['Ideas','Oct 28'],['Books','Oct 21'],['Gift list','Oct 19']];
+  $('list').innerHTML = notes.map(([t, d], i) => `<div class="note${i === 0 ? ' sel' : ''}">${t}<small>${d}</small></div>`).join('');
+  $('wave').innerHTML = Array.from({ length: 28 }, (_, i) => `<i style="animation-delay:${(-(i * 137) % 900)}ms;animation-duration:${520 + (i * 71) % 420}ms"></i>`).join('');
+  $('mbGlide').innerHTML = I.hand;
+  $('ticks').innerHTML = Array.from({ length: 64 }, (_, i) => {
+    const a = (i / 64) * Math.PI * 2, s = Math.sin(a), c = -Math.cos(a);
+    return `<line x1="${(s * 42).toFixed(2)}" y1="${(c * 42).toFixed(2)}" x2="${(s * 48).toFixed(2)}" y2="${(c * 48).toFixed(2)}"/>`;
+  }).join('');
+
+  // ---- runner ----
+  let runId = 0, playing = true, current = 0;
+  const wait = (ms, id) => new Promise((res, rej) => setTimeout(() => (id === runId ? res() : rej(0)), ms));
+  const move = (x, y, ms, id) => { cur.style.transitionDuration = ms + 'ms'; cur.style.left = x + '%'; cur.style.top = y + '%'; return wait(ms, id); };
+  const ripple = () => { const r = document.createElement('div'); r.className = 'ripple'; r.style.left = cur.style.left; r.style.top = cur.style.top; stage.appendChild(r); setTimeout(() => r.remove(), 700); };
+  const setPill = (state, left = '', right = '') => {
+    pill.className = 'pill' + (state === 'on' ? ' on' : state === 'wide' ? ' on wide' : '');
+    $('wl').innerHTML = left; $('wr').innerHTML = right;
+    $('mbGlide').innerHTML = state === 'off' ? I.slash : I.hand;
+  };
+  const select = i => document.querySelectorAll('.note').forEach((n, k) => n.classList.toggle('sel', k === i));
+
+  function reset() {
+    stage.classList.remove('dark', 'off');
+    setPill('on', `<span>${I.hand}</span>`, '<span class="dot"></span>');
+    $('said').innerHTML = ''; $('typed').innerHTML = '';
+    $('list').style.transform = '';
+    const f = $('file'); f.style.transition = 'none'; f.style.left = '82%'; f.style.top = '16%'; f.classList.remove('lift'); void f.offsetWidth; f.style.transition = '';
+    $('folder').classList.remove('hit');
+    $('sheet').hidden = true; $('menu').hidden = true; $('mbGlide').classList.remove('open');
+    select(0);
+  }
+
+  const scenes = [
+    { name: 'Move', run: async id => {
+      await move(30, 40, 900, id); await move(55, 62, 1100, id); await move(46, 30, 900, id); await move(38, 48, 800, id); await wait(500, id);
+    }},
+    { name: 'Click', run: async id => {
+      await move(20, 34, 900, id);
+      setPill('on', `<span class="pinch-c">${I.pinch}</span>`, '<span class="dot"></span>'); ripple(); select(1);
+      await wait(380, id); setPill('on', `<span>${I.hand}</span>`, '<span class="dot"></span>');
+      await move(20, 41.5, 600, id);
+      setPill('on', `<span class="pinch-c">${I.pinch}</span>`, '<span class="dot"></span>'); ripple(); select(2);
+      await wait(380, id); setPill('on', `<span>${I.hand}</span>`, '<span class="dot"></span>'); await wait(900, id);
+    }},
+    { name: 'Drag', run: async id => {
+      await move(86.5, 21, 1000, id);
+      setPill('on', `<span class="pinch-c">${I.pinch}</span>`, '<span class="pinch-c">Hold</span>'); ripple(); $('file').classList.add('lift'); await wait(350, id);
+      $('file').style.left = '82%'; $('file').style.top = '57%'; await move(86.5, 62, 900, id);
+      $('folder').classList.add('hit'); $('file').style.transition = 'opacity .25s'; $('file').style.opacity = 0;
+      setPill('on', `<span>${I.hand}</span>`, '<span class="dot"></span>'); await wait(300, id); $('folder').classList.remove('hit');
+      await wait(700, id); $('file').style.opacity = 1;
+    }},
+    { name: 'Scroll', run: async id => {
+      await move(22, 52, 800, id);
+      setPill('on', `<span class="pinch-c">${I.scroll}</span>`, '<span class="dot"></span>');
+      $('list').style.transform = 'translateY(-38%)'; await move(22, 60, 900, id); await wait(400, id);
+      $('list').style.transform = 'translateY(-12%)'; await move(22, 47, 900, id); await wait(300, id);
+      $('list').style.transform = ''; await wait(700, id);
+      setPill('on', `<span>${I.hand}</span>`, '<span class="dot"></span>'); await wait(500, id);
+    }},
+    { name: 'Talk', run: async id => {
+      await move(52, 58, 800, id); ripple(); $('typed').innerHTML = '<span class="caret"></span>'; await wait(500, id);
+      setPill('on', `<span>${I.fist}</span>`, `<span>${I.mic}</span>`); await wait(450, id);
+      setPill('wide', `<span>${I.fist}</span>`, `<span>${I.mic}</span>`);
+      const words = 'move the launch call to thursday at 3 and send ada the deck'.split(' ');
+      for (let i = 0; i < words.length; i++) {
+        $('said').innerHTML = words.slice(0, i).join(' ') + ` <span class="new">${words[i]}</span>`;
+        await wait(170 + (i % 3) * 60, id);
+      }
+      $('said').textContent = words.join(' '); await wait(600, id);
+      $('said').textContent = 'Move the launch call to Thursday at 3:00 and send Ada the deck.'; await wait(900, id);
+      setPill('on', `<span>${I.hand}</span>`, '<span class="dot"></span>');
+      $('typed').innerHTML = 'Move the launch call to Thursday at 3:00 and send Ada the deck.<span class="caret"></span>';
+      await wait(1800, id);
+    }},
+    { name: 'Low light', run: async id => {
+      await move(40, 45, 600, id);
+      stage.classList.add('dark'); await wait(700, id);
+      setPill('on', `<span class="warn-c">${I.moon}</span>`, ''); await wait(1100, id);
+      setPill('on', `<span>${I.watch}</span>`, '<span>Watch</span>'); await wait(700, id);
+      await move(20, 41.5, 900, id); ripple(); select(2); await wait(500, id);
+      await move(46, 60, 900, id); await wait(900, id);
+    }},
+    { name: 'Off', run: async id => {
+      await move(44, 50, 500, id);
+      setPill('on', `<span>${I.slash}</span>`, '<span style="color:var(--muted)">⌃⌥Space</span>'); stage.classList.add('off'); await wait(1300, id);
+      setPill('off'); await wait(1600, id);
+      setPill('on', `<span>${I.hand}</span>`, '<span class="dot"></span>'); stage.classList.remove('off'); await wait(800, id);
+    }},
+    { name: 'First run', run: async id => {
+      setPill('off'); $('sheet').hidden = false;
+      const steps = [[I.pinch, 'Pinch three times'], [I.pinch, 'Pinch, hold and move'], [I.scroll, 'Thumb to middle finger']];
+      const dots = $('steps').children;
+      const ticks = [...$('ticks').children];
+      for (let s = 0; s < steps.length; s++) {
+        $('card').classList.remove('done');
+        ticks.forEach(t => t.classList.remove('on'));
+        $('cardIcon').innerHTML = steps[s][0]; $('cardIcon').firstChild.classList.add('pulse');
+        $('cardWord').textContent = steps[s][1];
+        [...dots].forEach((d, k) => d.classList.toggle('on', k <= s));
+        await wait(500, id);
+        // Face ID style: ticks light up as the gesture is seen.
+        for (let k = 0; k < ticks.length; k++) { ticks[k].classList.add('on'); await wait(20, id); }
+        $('card').classList.add('done'); $('cardIcon').innerHTML = I.check; await wait(800, id);
+      }
+      $('card').classList.remove('done'); $('cardIcon').innerHTML = I.hand; $('cardWord').textContent = 'Ready'; await wait(1300, id);
+      $('sheet').hidden = true; setPill('on', `<span>${I.hand}</span>`, '<span class="dot"></span>'); await wait(600, id);
+    }},
+  ];
+
+  // ---- controls ----
+  const seg = $('seg');
+  seg.innerHTML = scenes.map((s, i) => `<button type="button" id="scene-${i}" aria-pressed="false">${s.name}</button>`).join('');
+  const playBtn = $('play');
+  const paint = () => {
+    [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', i === current));
+    playBtn.innerHTML = playing ? I.pause : I.play; playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+  };
+  function start(i) {
+    current = i; const id = ++runId; reset(); paint();
+    scenes[i].run(id).then(() => { if (id === runId && playing) start((i + 1) % scenes.length); }).catch(() => {});
+  }
+  seg.addEventListener('click', e => { const b = e.target.closest('button'); if (b) start([...seg.children].indexOf(b)); });
+  playBtn.addEventListener('click', () => { playing = !playing; paint(); if (playing) start(current); });
+  document.addEventListener('keydown', e => {
+    const n = parseInt(e.key, 10); if (n >= 1 && n <= scenes.length) start(n - 1);
+    if (e.key === ' ' && e.target === document.body) { e.preventDefault(); playBtn.click(); }
+  });
+
+  // status-item menu
+  const mb = $('mbGlide');
+  const toggleMenu = () => { const m = $('menu'); m.hidden = !m.hidden; mb.classList.toggle('open', !m.hidden); };
+  mb.addEventListener('click', e => { e.stopPropagation(); toggleMenu(); });
+  mb.addEventListener('keydown', e => { if (e.key === 'Enter') toggleMenu(); });
+  $('menu').addEventListener('click', e => e.stopPropagation());
+  document.addEventListener('click', () => { $('menu').hidden = true; mb.classList.remove('open'); });
+
+  start(0);
+})();
+</script>

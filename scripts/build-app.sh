@@ -29,3 +29,12 @@ else
 fi
 
 echo "$APP"
+
+# --install: copy the signed app to /Applications, so it shows in Launchpad and Spotlight.
+# The signature is the same, so the camera, Accessibility and microphone permissions stay.
+if [ "${1:-}" = "--install" ]; then
+  pkill -x Glide 2>/dev/null || true
+  rm -rf /Applications/Glide.app
+  ditto "$APP" /Applications/Glide.app
+  echo "Installed /Applications/Glide.app"
+fi

@@ -55,11 +55,14 @@ A ring at the pointer shows what Glide sees. The ring gets smaller as your finge
    ./scripts/build-app.sh
    ```
 
-4. Open the app:
+4. Put the app in Applications and open it:
 
    ```bash
-   open build/Glide.app
+   ./scripts/build-app.sh --install
+   open /Applications/Glide.app
    ```
+
+   Without `--install`, the app stays in `build/Glide.app`.
 
 5. Follow the setup window. Glide asks for these permissions:
    - **Camera**, to see your hand.
